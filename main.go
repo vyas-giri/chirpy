@@ -4,37 +4,10 @@ import (
 	"net/http"
 	"sync/atomic"
 	"log"
-	"encoding/json"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
-}
-
-type validateRequest struct {
-	Body string `json:"body"`
-}
-
-func handlerValidate(w http.ResponseWriter, r *http.Request) {
-	req := validateRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	if req.Body == "" {
-		respondWithError(w, http.StatusBadRequest, "Body field is required")
-		return
-	}
-
-	if len(req.Body) > 280 {
-		respondWithError(w, http.StatusBadRequest, "Body exceeds 280 characters")
-		return
-	}
-
-	response := map[string]bool{"valid": true}
-	respondWithJSON(w, http.StatusOK, response)
 }
 
 func main() {
