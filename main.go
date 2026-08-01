@@ -1,21 +1,41 @@
 package main
 
 import (
-	"net/http"
-	"sync/atomic"
+	"database/sql"
 	"log"
+	"net/http"
+	"os"
+	"sync/atomic"
+
+	"github.com/joho/godotenv"
+	"github.com/vyas-giri/chirpy/internal/database"
+
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	dbQueries *database.Queries
 }
 
 func main() {
+	godotenv.Load()
+	dbUrl := os.Getenv("DB_URL")
+	if dbUrl == "" {
+		log.Fatal("DB_URL environment variable is not set")
+	}
+	db, err := sql.Open("postgres", dbUrl)
+	if err != nil {
+		log.Fatalf("Error opening database: %v", err)
+	}
+	dbQueries := database.New(db)
+	defer db.Close()
 	const port = "8080"
 	const filePathRoot = "."
 
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
+		dbQueries: dbQueries,
 	}
 
 	mux := http.NewServeMux()

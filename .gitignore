@@ -1,2 +1,5 @@
 # build files
 out
+
+# env files
+.env
