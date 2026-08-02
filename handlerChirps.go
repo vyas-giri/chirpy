@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -77,4 +78,52 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 		Body:      chirp.Body,
 		UserID:    chirp.UserID,
 	})
+}
+
+func (cfg *apiConfig) handlerChirpsList(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.dbQueries.ListChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to list chirps")
+		return
+	}
+
+	response := make([]Chirp, len(chirps))
+	for i, chirp := range chirps {
+		response[i] = Chirp{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt: chirp.UpdatedAt.Format("2006-01-02 15:04:05"),
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
+		}
+	}
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+func (cfg *apiConfig) handlerChirpByID(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/chirps/")
+	chirpID, err := uuid.Parse(idStr)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid chirp ID")
+		return
+	}
+
+	chirp, err := cfg.dbQueries.GetChirpByID(r.Context(), chirpID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "Chirp not found")
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "Failed to get chirp: "+err.Error())
+		return
+	}
+
+	response := Chirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: chirp.UpdatedAt.Format("2006-01-02 15:04:05"),
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	}
+	respondWithJSON(w, http.StatusOK, response)
 }
